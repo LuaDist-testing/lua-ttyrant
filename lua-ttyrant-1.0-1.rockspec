@@ -1,16 +1,8 @@
--- This file was automatically generated for the LuaDist project.
-
-package = "lua-ttyrant"
+package = "Lua-TTyrant"
 version = "1.0-1"
--- LuaDist source
 source = {
-  tag = "1.0-1",
-  url = "git://github.com/LuaDist-testing/lua-ttyrant.git"
+    url = "git://github.com/valeriupalos/lua-ttyrant.git"
 }
--- Original source
--- source = {
---     url = "git://github.com/valeriupalos/lua-ttyrant.git"
--- }
 description = {
     summary = "TokyoTyrant API for Lua.",
     detailed = [[
