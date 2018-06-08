@@ -1,0 +1,205 @@
+--- Project --------------------------------------------------------------------------------------------------
+
+    Lua-TTyrant
+
+    TokyoTyrant API for Lua.
+    Copyright (C)2010 by Valeriu Palos. All rights reserved.
+    This library is under the MIT license (read doc/README).
+
+--- Description ----------------------------------------------------------------------------------------------
+
+    Lua-ttyrant is a binding to the C API of the TokyoTyrant server (visit http://fallabs.com/) for the Lua
+    programming language. I have seen several attempts on the net to build a TokyoTyrant library straight in
+    Lua (implementing the tyrant/memcache protocol) but I feel that is an unnatural approach since Lua was
+    especially designed to work *with* C and not to avoid it. Further more, by using the actual TokyoTyrant C
+    API library this implementation is less likely to produce protocol errors or inconsistencies.
+
+    The goal of lua-ttyrant is to be a stable, binary-safe and complete binding of the TokyoTyrant C API
+    for both Lua and LuaJIT. At the time of this writing TokyoTyrant 1.1.41 was used as the reference API.
+
+--- Prerequisites --------------------------------------------------------------------------------------------
+
+    To compile lua-ttyrant you will need the following progams compiled/installed on your system:
+
+    1. GCC
+    2. TokyoTyrant
+    3. lua 5.1
+    4. luarocks
+
+    On Debian/Ubuntu-based systems you can install all of these by issuing the following command:
+
+       $ sudo apt-get install build-essential libtokyotyrant-dev lua5.1 liblua5.1-0-dev luarocks
+
+--- Install/Test ---------------------------------------------------------------------------------------------
+
+    The recommended way to install Lua-TTyrant is via the LuaRocks system:
+
+    $ luarocks install lua-ttyrant
+    
+    However, as an alternative, you can do it manually like this:
+    
+    $ git clone https://github.com/valeriupalos/lua-ttyrant
+    $ cd lua-ttyrant
+    $ luarocks make
+    
+    If you want to install it system-wide just run the last command as root (i.e. sudo luarocks make).
+
+    To run the set of tests you will first have to start two instances of ttserver: one for a regular (hash)
+    database (on port 1978) and another for a table database (on port 1979), then run the test.lua script:
+
+    $ ttserver -port 1978 /tmp/test.tch &
+    $ ttserver -port 1979 /tmp/test.tct &
+    $ lua test/test.lua
+
+    At the end you can stop the tyrant instances and delete the generated files like this:
+
+    $ killall ttserver
+    $ rm -rf /tmp/test.*
+
+--- Bugs -----------------------------------------------------------------------------------------------------
+
+    I *really* like to keep my works bug-free but sometimes that is too much work for just one person. So I
+    ask you to issue a ticket (https://github.com/valeriupalos/lua-ttyrant/issues) when you find any bugs or
+    misfeature or if you simply have a suggestion. Thank you!
+
+--- Documentation --------------------------------------------------------------------------------------------
+
+    The lua-ttyrant library is a *binding* which means that it actually "exposes" the functions provided
+    by the original C API into the Lua language. Therefore you only need to consult two resources in order
+    to know how to use it:
+
+    1. The TokyoTyrant API reference (http://fallabs.com/tokyotyrant/spex.html).
+    2. The 'test/test.lua' file which contains test cases for every implemented API function.
+
+    There are however, as the tests show, a few differences from the original API. These are outlined below:
+
+    --> The functions tcrdbecode() and tcrdberrmsg() are not present in the binding; instead all functions
+        that can fail, will return <nil, 'error string'> on failure (as is the usual for Lua).
+
+    --> The functionality usually provided in C by the tcrdbmisc() function (i.e. bulk operations) is merged
+        straight in the get(), put() and out() methods of the ttyrant class, all of which can act on a whole
+        set of keys/values, given as a table or a list (see the test cases for examples).
+
+    --> The function variants ending in '2' (for strings) make no sense in Lua since the values are always
+        implicitly converted into strings.
+
+    --> Since Lua makes no difference between integers and doubles, the functions tcrdbaddint() and
+        tcrdbadddouble() are merged into the function(s) ttyrant:increment() and <table>:increment(). The
+        same goes for tcrdbiterinit() and tcrdbiternext() which are merged into <any>:iterator(). Also, other
+        functions were only used internally (e.g. tcrdbqryrescols()) since they have no meaning for Lua.
+
+--- Changes --------------------------------------------------------------------------------------------------
+
+    *** 2012-05-28 ***
+    
+    Fixed a memory leak in _table_put.
+
+    *** 2012-02-18 ***
+
+    - Depreciated <any>:keys()
+      The keys() iterator function is depreciated in favor of iterator().
+      
+    - Depreciated ttyrant:open()
+      The ttyrant:open() function has moved in the ttyrant.hash namespace (to match ttyrant.table).
+      
+    - Depreciated <any>:open({ host = 'localhost', port = 1978 })
+      Passing a table of values to the open() functions is now depreciated; use either of:
+        - open("localhost:1978")
+        - open("localhost", 1978)
+
+    - Depreciated <query>:delete()
+      Query objects are now garbage collected (the delete() method does nothing and is depreciated).
+      
+    - Depreciated <query>:search_*()
+      Query methods search_get, search_out, search_count are depreciated in favor of 
+      searchget, searchout, searchcount (i.e. without the underscores).
+      
+    - Marked tcrdbget3 as implemented since <hash>:get(<table>) alreadyd had the same functionality.
+    
+    - Extended <hash>:get() and <any>:out() to also accept associative tables beside simple arrays.
+      Basically the table's string keys are considered in addition to the values of numeric keys.
+      All the following calls do the exact same thing (the same applies to <any>:out()):
+        - <hash>:get('key1', 'key2')                    -- list
+        - <hash>:get{'key1', 'key2'}                    -- indexed table
+        - <hash>:get{['key1'] = ..., ['key2'] = ...}    -- associative table
+        - <hash>:get{['key1'] = ..., 'key2'}            -- combination
+        
+    - Changed <hash>:put(<table>) to ignore numeric (array index) keys (it is possible that this will break
+      backward-compatibility but unlikely since this was a weird and useless "feature").
+    
+--- Status ---------------------------------------------------------------------------------------------------
+
+    The library is *almost* complete meaning that there are several functions which are not yet implemented
+    (i.e. the ones marked with *** TODO *** in the correlation listing below).
+    
+    The library is to be considered in *beta* state, though it is already quite stable, being actually used 
+    in production environments for more than a year. If you require some (or all) of the functions below that
+    are not yet implemented, please either contribute some code or *ask* me to do it and I'll try to oblige.
+    
+    Also unfortunately I had no time *yet* to write a *real* documentation; for now skim over the statements
+    in test.lua for usage examples (they should be self-explanatory). You may also check the TokyoTyrant help
+    (http://fallabs.com/tokyotyrant/spex.html).
+    
+    If you *really* need a manual then please yell (https://github.com/valeriupalos/lua-ttyrant/issues).
+
+--- Correlation ----------------------------------------------------------------------------------------------
+
+    This is how the original C functions correlate to the Lua functions:
+    
+    tcrdbopen, tcrdbopen2                               - ttyrant.hash:open(), ttyrant.table:open()
+
+    tcrdbclose                                          - <hash>:close(), <table>:close()
+    tcrdbput, tcrdbput2                                 - <hash>:put()
+    tcrdbputkeep, tcrdbputkeep2                         - <hash>:putkeep()
+    tcrdbputcat, tcrdbputcat2                           - <hash>:putcat()
+    tcrdbputshl, tcrdbputshl2                           - <hash>:putshl()
+    tcrdbputnr, tcrdbputnr2                             - <hash>:putnr()
+    tcrdbout, tcrdbout2                                 - <hash>:putout()
+    tcrdbget, tcrdbget2, tcrdbget3                      - <hash>:get()
+    tcrdbvsiz, tcrdbvsiz2                               - <hash>:vsiz()
+    tcrdbiterinit, tcrdbiternext, tcrdbiternext2        - <hash>:iterator(), <table>:iterator()
+    tcrdbfwmkeys, tcrdbfwmkeys2                         - <hash>:fwmkeys(), <table>:fwmkeys()
+    tcrdbaddint, tcrdbadddouble                         - <hash>:increment(), <table>:increment()
+    tcrdbsync                                           - <hash>:sync(), <table>:sync()
+    tcrdboptimize                                       - <hash>:optimize(), <table>:optimize()
+    tcrdbvanish                                         - <hash>:vanish(), <table>:vanish()
+    tcrdbcopy                                           - <hash>:copy(), <table>:copy()
+    tcrdbrestore                                        - <hash>:restore(), <table>:restore()
+    tcrdbrnum                                           - <hash>:rnum(), <table>:rnum()
+    tcrdbsize                                           - <hash>:size(), <table>:size()
+    tcrdbstat                                           - <hash>:stat(), <table>:stat()
+
+    tcrdbtblput                                         - <table>:put()
+    tcrdbtblputkeep                                     - <table>:putkeep()
+    tcrdbtblputcat                                      - <table>:putcat()
+    tcrdbtblout                                         - <table>:out()
+    tcrdbtblget                                         - <table>:get()
+    tcrdbtblsetindex                                    - <table>:setindex()
+    tcrdbtblgenuid                                      - <table>:genuid()
+
+    tcrdbqrynew                                         - ttyrant.query:new()
+
+    tcrdbqryaddcond                                     - <query>:addcond()
+    tcrdbqrysetorder                                    - <query>:setorder()
+    tcrdbqrysetlimit                                    - <query>:setlimit()
+    tcrdbqrysearch                                      - <query>:search()
+    tcrdbqrysearchout                                   - <query>:searchout()
+    tcrdbqrysearchget                                   - <query>:searchget()
+    tcrdbqrysearchcount                                 - <query>:search_count()
+    tcrdbqryhint                                        - <query>:hint()
+
+    tcrdbext, tcrdbext2                                 - *** TODO ***
+    tcrdbtune                                           - *** TODO ***
+    tcrdbsetmst, tcrdbsetmst2                           - *** TODO ***
+    tcrdbmetasearch                                     - *** TODO ***
+    tcrdbparasearch                                     - *** TODO ***
+
+    tcrdberrmsg                                         - (used internally)
+    tcrdbnew                                            - (used internally)
+    tcrdbdel                                            - (used internally)
+    tcrdbecode                                          - (used internally)
+    tcrdbmisc                                           - (used internally)
+    tcrdbqrydel                                         - (used internally)
+    tcrdbqryrescols                                     - (used internally)
+
+--- End ------------------------------------------------------------------------------------------------------

@@ -1,0 +1,6 @@
+lua-ttyrant
+
+A Lua binding to the C API of the TokyoTyrant key-value database server.
+Written by Valeriu Paloş (Copyright 2010).
+
+Read the doc/DETAILS file for more information.
